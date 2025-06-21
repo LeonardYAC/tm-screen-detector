@@ -1,52 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>TM JS Model</title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <title>Teachable Machine Classifier</title>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 </head>
 <body>
-  <h2>Screen Time Quest Classifier</h2>
-  <video id="webcam" autoplay playsinline width="224" height="224"></video>
-  <button onclick="predict()">Classify</button>
-  <p id="result"></p>
+  <h3>AI Classifier Running...</h3>
+  <img id="preview" width="200"><br>
+  <p id="output"></p>
 
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
   <script>
-    const URL = "https://teachablemachine.withgoogle.com/models/pZEFc6LMb/";
-
-    let model, webcam;
+    const URL = "https://teachablemachine.withgoogle.com/models/pZEFc6LMb";
+    let model, maxPredictions;
 
     async function init() {
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
       model = await tmImage.load(modelURL, metadataURL);
-
-      webcam = new tmImage.Webcam(224, 224, true);
-      await webcam.setup();
-      await webcam.play();
-      window.requestAnimationFrame(loop);
-
-      document.getElementById("webcam").appendChild(webcam.canvas);
-    }
-
-    async function loop() {
-      webcam.update();
-      window.requestAnimationFrame(loop);
-    }
-
-    async function predict() {
-      const prediction = await model.predict(webcam.canvas);
-      prediction.sort((a, b) => b.probability - a.probability);
-      const top = prediction[0];
-      document.getElementById("result").innerText = `Class: ${top.className} (${(top.probability * 100).toFixed(2)}%)`;
-
-      if (window.AppInventor) {
-        window.AppInventor.setWebViewString(top.className);
-      }
+      maxPredictions = model.getTotalClasses();
     }
 
     init();
+
+    setInterval(() => {
+      try {
+        let base64 = window.AppInventor.getWebViewString();
+        if (!base64.startsWith("data:image")) {
+          base64 = "data:image/jpeg;base64," + base64;
+        }
+
+        const img = new Image();
+        img.src = base64;
+        img.onload = async () => {
+          document.getElementById("preview").src = img.src;
+          const prediction = await model.predict(img);
+          let result = prediction.sort((a, b) => b.probability - a.probability)[0];
+          document.getElementById("output").innerText = result.className;
+          window.AppInventor.setWebViewString(result.className);
+        };
+      } catch (e) {
+        console.log("Waiting for App Inventor image...");
+      }
+    }, 3000);
   </script>
 </body>
 </html>
