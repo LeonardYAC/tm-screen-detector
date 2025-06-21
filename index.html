@@ -1,43 +1,58 @@
-<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>AI Classifier</title>
+  <title>Quest Detector</title>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 </head>
 <body>
-  <h3>Upload a photo to start your quest</h3>
-  <input type="file" accept="image/*" onchange="loadImage(event)">
-  <br><br>
+  <h2>Upload a photo to complete your quest</h2>
+  <input type="file" id="imageUpload" accept="image/*" capture="environment">
   <img id="preview" width="200"><br>
-  <p id="output"></p>
+  <p id="label"></p>
 
-  <script>
+  <script type="text/javascript">
     const URL = "https://teachablemachine.withgoogle.com/models/pZEFc6LMb/";
-    let model, maxPredictions;
+    let model, labelContainer, maxPredictions;
 
-    async function init() {
+    async function loadModel() {
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
     }
 
-    init();
+    async function predict(image) {
+      const prediction = await model.predict(image);
+      let topPrediction = prediction[0];
 
-    function loadImage(event) {
-      const img = document.getElementById('preview');
-      img.src = URL.createObjectURL(event.target.files[0]);
+      // Find highest probability prediction
+      for (let i = 1; i < prediction.length; i++) {
+        if (prediction[i].probability > topPrediction.probability) {
+          topPrediction = prediction[i];
+        }
+      }
 
-      img.onload = async () => {
-        const prediction = await model.predict(img);
-        let result = prediction.sort((a, b) => b.probability - a.probability)[0];
-        document.getElementById("output").innerText = result.className;
+      document.getElementById("label").innerText = `Prediction: ${topPrediction.className}`;
 
-        // Send result back to MIT App Inventor
-        window.AppInventor.setWebViewString(result.className);
-      };
+      // Send result to MIT App Inventor
+      if (window.AppInventor) {
+        window.AppInventor.setWebViewString(topPrediction.className);
+      }
     }
+
+    document.getElementById("imageUpload").addEventListener("change", function (event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          const img = document.getElementById("preview");
+          img.src = reader.result;
+          img.onload = () => predict(img);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    loadModel();
   </script>
 </body>
 </html>
