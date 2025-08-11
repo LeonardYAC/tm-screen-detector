@@ -1,6 +1,34 @@
 <html>
 <head>
   <title>Quest Detector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    h2 {
+      font-size: 1.5em;
+    }
+    input[type="file"] {
+      font-size: 1.2em;
+      padding: 10px;
+      margin: 20px 0;
+    }
+    img {
+      max-width: 90%;
+      height: auto;
+      border: 3px solid #333;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 1.3em;
+      font-weight: bold;
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 </head>
@@ -8,32 +36,27 @@
   <h2>Upload a photo to complete your quest</h2>
   <input type="file" id="imageUpload" accept="image/*" capture="environment">
   <br>
-  <img id="preview" width="200"><br>
+  <img id="preview"><br>
   <p id="label"></p>
 
   <script type="text/javascript">
     const URL = "https://teachablemachine.withgoogle.com/models/pZEFc6LMb/";
-    let model, maxPredictions;
+    let model;
 
     async function loadModel() {
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
       model = await tmImage.load(modelURL, metadataURL);
-      maxPredictions = model.getTotalClasses();
     }
 
     async function predict(image) {
       const prediction = await model.predict(image);
-
-      // Sort predictions from highest probability to lowest
       prediction.sort((a, b) => b.probability - a.probability);
       const topPrediction = prediction[0];
 
-      // Show best prediction in HTML
       document.getElementById("label").innerText =
         `Prediction: ${topPrediction.className} (${(topPrediction.probability * 100).toFixed(1)}%)`;
 
-      // Send full predictions to MIT App Inventor as JSON
       if (window.AppInventor) {
         window.AppInventor.setWebViewString(JSON.stringify(prediction));
       }
