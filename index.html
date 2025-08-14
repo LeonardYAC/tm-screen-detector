@@ -62,47 +62,56 @@
 
   <br>
   <img id="preview"><br>
-  <div id="label" class="result-box">No prediction yet</div>
-
   <script type="text/javascript">
     const URL = "https://teachablemachine.withgoogle.com/models/pZEFc6LMb/";
-    let model;
+    let model, labelContainer, maxPredictions;
 
     async function loadModel() {
-      const modelURL = URL + "model.json";
-      const metadataURL = URL + "metadata.json";
-      model = await tmImage.load(modelURL, metadataURL);
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
     }
 
     async function predict(image) {
-      const prediction = await model.predict(image);
-      prediction.sort((a, b) => b.probability - a.probability);
-      const topPrediction = prediction[0];
+        const prediction = await model.predict(image);
+        let topPrediction = prediction[0];
 
-      // Update result box
-      document.getElementById("label").innerText =
-        `${topPrediction.className} (${(topPrediction.probability * 100).toFixed(1)}%)`;
+        // Find highest probability prediction
+        for (let i = 1; i < prediction.length; i++) {
+            if (prediction[i].probability > topPrediction.probability) {
+                topPrediction = prediction[i];
+            }
+        }
 
-      // Send result to MIT App Inventor
-      if (window.AppInventor) {
-        window.AppInventor.setWebViewString(JSON.stringify(prediction));
-      }
+        // Replace "Please wait..." with result
+        document.getElementById("label").innerText =
+            `Prediction: ${topPrediction.className}`;
+
+        // Send result to MIT App Inventor
+        if (window.AppInventor) {
+            window.AppInventor.setWebViewString(topPrediction.className);
+        }
     }
 
     document.getElementById("imageUpload").addEventListener("change", function (event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function () {
-          const img = document.getElementById("preview");
-          img.src = reader.result;
-          img.onload = () => predict(img);
-        };
-        reader.readAsDataURL(file);
-      }
+        const file = event.target.files[0];
+        if (file) {
+            // Show "Please wait..." right away
+            document.getElementById("label").innerText = "Please wait...";
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                const img = document.getElementById("preview");
+                img.src = reader.result;
+                img.onload = () => predict(img);
+            };
+            reader.readAsDataURL(file);
+        }
     });
 
     loadModel();
+</script>
   </script>
 </body>
 </html>
